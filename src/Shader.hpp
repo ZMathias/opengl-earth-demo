@@ -10,16 +10,28 @@
 
 class Shader
 {
-	unsigned int vertexShaderId{}, fragmentShaderId{}, programId{};
+	unsigned int vertexShaderId{}, fragmentShaderId{}, controlShaderId{}, evaluationShaderId{}, programId{};
 	std::string vertexShader, fragmentShader;
 
 public:
 
 	// only file reading is done at construction time to allow modification of shaderCode programatically if needed
-	Shader(const char* vertexPath, const char* fragmentPath) {
+	Shader(const char* vertexPath, const char* fragmentPath, const char* tcsPath = nullptr, const char* tesPath = nullptr) {
 		// open both files and read their contents fully into vertexShader and fragmentShader in that order
 		std::ifstream vertexFile(vertexPath);
 		std::ifstream fragmentFile(fragmentPath);
+		std::ifstream controlFile;
+		std::ifstream evaluationFile;
+		if (tcsPath != nullptr && tesPath != nullptr)
+		{
+			controlFile.open(tcsPath);
+			evaluationFile.open(tesPath);
+			if (!(controlFile.is_open() && evaluationFile.is_open()))
+			{
+				LogError("Failed to open control and evaluation shader files");
+				return;
+			}
+		}
 		if (!(vertexFile.is_open() && fragmentFile.is_open()))
 		{
 			LogError("Failed to open shader files: " + std::string(vertexPath) + " and " + std::string(fragmentPath) + "\n");

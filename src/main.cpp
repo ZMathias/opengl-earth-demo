@@ -116,6 +116,9 @@ GLFWwindow* initOpenGL()
 
 	glViewport(0, 0, width, height);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CCW);
 	glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouseCallback);
@@ -158,7 +161,7 @@ int main()
 	ShaderProgram.CompileShaders();
 	ShaderProgram.CreateAndLinkProgram();
 
-	Sphere sphere(30, 2880, 1440, true);
+	Sphere sphere(20, 4320, 2160, true);
 
 	//create a vertex buffer object and the vertex array object
 	unsigned int VAO, VBO, EBO;
@@ -219,6 +222,7 @@ int main()
 	//add textures
 	Texture texture;
 	texture.AddTexture(R"(F:\prj\C++\GeoWizard\src\res\heightmap-small.png)", 0);
+	texture.AddTexture(R"(F:\prj\C++\GeoWizard\src\res\color-rgba.png)", 1);
 
 	glCheckError();
 
@@ -231,6 +235,7 @@ int main()
 	const glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.01f, 100.0f);
 	ShaderProgram.SetMat4("projection", projection);
 	ShaderProgram.SetInt("tex", 0);
+	ShaderProgram.SetInt("color", 1);
 
 	float lastFrameTime{};
 	float timeAccumulator{};
@@ -288,8 +293,10 @@ int main()
 			ShaderProgram.SetMat4("model", model);
 			//glDrawArrays(GL_TRIANGLES, 0, faceGenerator.vertices.size());
 			texture.BindTexture(0);
+			texture.BindTexture(1);
 			glDrawElements(GL_TRIANGLES, sphere.getIndexCount(), GL_UNSIGNED_INT, (void*)0);
 			Texture::UnbindTexture(0);
+			Texture::UnbindTexture(1);
 
 		}
 		glBindVertexArray(0);
