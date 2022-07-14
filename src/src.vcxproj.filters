@@ -63,7 +63,10 @@
     <ClCompile Include="imgui_widgets.cpp">
       <Filter>Header Files\Libraries</Filter>
     </ClCompile>
-    <ClCompile Include="Icosphere.cpp">
+    <ClCompile Include="Cubesphere.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Sphere.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -119,7 +122,10 @@
     <ClInclude Include="SphereGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Icosphere.h">
+    <ClInclude Include="Cubesphere.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sphere.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

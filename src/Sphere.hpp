@@ -1,34 +1,34 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Icosphere.h
-// ===========
-// Polyhedron subdividing icosahedron (20 tris) by N-times iteration
-// The icosphere with N=1 (default) has 80 triangles by subdividing a triangle
-// of icosahedron into 4 triangles. If N=0, it is identical to icosahedron.
+// Sphere.h
+// ========
+// Sphere for OpenGL with (radius, sectors, stacks)
+// The min number of sectors is 3 and The min number of stacks are 2.
 //
 //  AUTHOR: Song Ho Ahn (song.ahn@gmail.com)
-// CREATED: 2018-07-23
-// UPDATED: 2019-12-28
+// CREATED: 2017-11-01
+// UPDATED: 2020-05-20
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef GEOMETRY_ICOSPHERE_H
-#define GEOMETRY_ICOSPHERE_H
+#ifndef GEOMETRY_SPHERE_H
+#define GEOMETRY_SPHERE_H
 
 #include <vector>
-#include <map>
 
-class Icosphere
+class Sphere
 {
 public:
     // ctor/dtor
-    Icosphere(float radius=1.0f, int subdivision=1, bool smooth=false);
-    ~Icosphere() {}
+    Sphere(float radius=1.0f, int sectorCount=36, int stackCount=18, bool smooth=true);
+    ~Sphere() {}
 
     // getters/setters
     float getRadius() const                 { return radius; }
+    int getSectorCount() const              { return sectorCount; }
+    int getStackCount() const               { return stackCount; }
+    void set(float radius, int sectorCount, int stackCount, bool smooth=true);
     void setRadius(float radius);
-    int getSubdivision() const              { return subdivision; }
-    void setSubdivision(int subdivision);
-    bool getSmooth() const                  { return smooth; }
+    void setSectorCount(int sectorCount);
+    void setStackCount(int stackCount);
     void setSmooth(bool smooth);
 
     // for vertex data
@@ -38,13 +38,11 @@ public:
     unsigned int getIndexCount() const      { return (unsigned int)indices.size(); }
     unsigned int getLineIndexCount() const  { return (unsigned int)lineIndices.size(); }
     unsigned int getTriangleCount() const   { return getIndexCount() / 3; }
-
-    unsigned int getVertexSize() const      { return (unsigned int)vertices.size() * sizeof(float); }   // # of bytes
+    unsigned int getVertexSize() const      { return (unsigned int)vertices.size() * sizeof(float); }
     unsigned int getNormalSize() const      { return (unsigned int)normals.size() * sizeof(float); }
     unsigned int getTexCoordSize() const    { return (unsigned int)texCoords.size() * sizeof(float); }
     unsigned int getIndexSize() const       { return (unsigned int)indices.size() * sizeof(unsigned int); }
     unsigned int getLineIndexSize() const   { return (unsigned int)lineIndices.size() * sizeof(unsigned int); }
-
     const float* getVertices() const        { return vertices.data(); }
     const float* getNormals() const         { return normals.data(); }
     const float* getTexCoords() const       { return texCoords.data(); }
@@ -58,9 +56,9 @@ public:
     const float* getInterleavedVertices() const     { return interleavedVertices.data(); }
 
     // draw in VertexArray mode
-    void draw() const;
-    void drawLines(const float lineColor[4]) const;
-    void drawWithLines(const float lineColor[4]) const;
+    void draw() const;                                  // draw surface
+    void drawLines(const float lineColor[4]) const;     // draw lines only
+    void drawWithLines(const float lineColor[4]) const; // draw surface and lines
 
     // debug
     void printSelf() const;
@@ -68,44 +66,29 @@ public:
 protected:
 
 private:
-    // static functions
-    static void computeFaceNormal(const float v1[3], const float v2[3], const float v3[3], float normal[3]);
-    static void computeVertexNormal(const float v[3], float normal[3]);
-    static float computeScaleForLength(const float v[3], float length);
-    static void computeHalfVertex(const float v1[3], const float v2[3], float length, float newV[3]);
-    static void computeHalfTexCoord(const float t1[2], const float t2[2], float newT[2]);
-    static bool isSharedTexCoord(const float t[2]);
-    static bool isOnLineSegment(const float a[2], const float b[2], const float c[2]);
-
     // member functions
-    void updateRadius();
-    std::vector<float> computeIcosahedronVertices();
-    void buildVerticesFlat();
     void buildVerticesSmooth();
-    void subdivideVerticesFlat();
-    void subdivideVerticesSmooth();
+    void buildVerticesFlat();
     void buildInterleavedVertices();
+    void clearArrays();
     void addVertex(float x, float y, float z);
-    void addVertices(const float v1[3], const float v2[3], const float v3[3]);
-    void addNormal(float nx, float ny, float nz);
-    void addNormals(const float n1[3], const float n2[3], const float n3[3]);
+    void addNormal(float x, float y, float z);
     void addTexCoord(float s, float t);
-    void addTexCoords(const float t1[2], const float t2[2], const float t3[2]);
     void addIndices(unsigned int i1, unsigned int i2, unsigned int i3);
-    void addSubLineIndices(unsigned int i1, unsigned int i2, unsigned int i3,
-                           unsigned int i4, unsigned int i5, unsigned int i6);
-    unsigned int addSubVertexAttribs(const float v[3], const float n[3], const float t[2]);
+    std::vector<float> computeFaceNormal(float x1, float y1, float z1,
+                                         float x2, float y2, float z2,
+                                         float x3, float y3, float z3);
 
     // memeber vars
-    float radius;                           // circumscribed radius
-    int subdivision;
+    float radius;
+    int sectorCount;                        // longitude, # of slices
+    int stackCount;                         // latitude, # of stacks
     bool smooth;
     std::vector<float> vertices;
     std::vector<float> normals;
     std::vector<float> texCoords;
     std::vector<unsigned int> indices;
     std::vector<unsigned int> lineIndices;
-    std::map<std::pair<float, float>, unsigned int> sharedIndices;   // indices of shared vertices, key is tex coord (s,t)
 
     // interleaved
     std::vector<float> interleavedVertices;

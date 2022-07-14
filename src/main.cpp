@@ -10,7 +10,7 @@
 #include "Callbacks.hpp"
 #include "Shader.hpp"
 #include "Texture.hpp"
-#include "Icosphere.h"
+#include "Sphere.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -19,7 +19,7 @@
 
 constexpr int width = 1200, height = 900;
 float ColorOffset{};
-
+float heightMultiplier{1.0f};
 float lastX = width / 2.0f;
 float lastY = height / 2.0f;
 
@@ -137,6 +137,9 @@ void getHardwareStats()
 	ImGui::Begin("Properties"); \
 	{ \
 		ImGui::SliderFloat("Color Offset", &ColorOffset, -2.0f, 2.0f, "%.2f"); \
+		ImGui::SliderFloat("heightMultiplier", &heightMultiplier, 0.1f, 50.f, "%.2f"); \
+		ImGui::SliderFloat("angle", &angle, -180.0f, 180.0f, "%.2f"); \
+		ImGui::SliderFloat3("axis", axis, 0.0f, 1.0f, "%.2f"); \
 		ImGui::Text("Triangles: %i", sphere.getIndexCount() / 3); \
 		ImGui::Text("Vertices: %i", sphere.getInterleavedVertexCount() / 3); \
 	} \
@@ -155,30 +158,30 @@ int main()
 	ShaderProgram.CompileShaders();
 	ShaderProgram.CreateAndLinkProgram();
 
-	Icosphere sphere(10.0f, 6, true);
+	Sphere sphere(30, 2880, 1440, true);
 
 	//create a vertex buffer object and the vertex array object
 	unsigned int VAO, VBO, EBO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
-	glGenBuffers(1, &VBO);
 
 	//bind the VBO
+	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sphere.getInterleavedVertexSize(), sphere.getInterleavedVertices(), GL_STATIC_DRAW);
 
 	// set the vertex attrib pointer up
-	int stride = sphere.getInterleavedStride();
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float) * 3));
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float) * 6));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sphere.getInterleavedStride(), (void*)0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sphere.getInterleavedStride(), (void*)(sizeof(float) * 3));
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sphere.getInterleavedStride(), (void*)(sizeof(float) * 6));
 
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.getIndexSize(), sphere.getIndices(), GL_STATIC_DRAW);
 
 	glEnableVertexAttribArray(0);
-
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 
 	//unbind VAO before unbinding anything else to avoid opengl deassociating it with the vao
 	glBindVertexArray(0);
@@ -240,11 +243,14 @@ int main()
 	ImGui_ImplOpenGL3_Init(); // Must be below create context
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 #endif
+	float angle{-90.0f};
+	float axis[3]{1.0f, 1.0f, 1.0f};
 	while (!glfwWindowShouldClose(window))
 	{
 #ifdef MENU
 		RenderMenu();
 		ShaderProgram.SetVec3("ColorOffset", glm::vec3(ColorOffset));
+		ShaderProgram.SetFloat("heightMultiplier", heightMultiplier);
 #endif
 		const float currentFrame = glfwGetTime();
 		const float deltaTime = currentFrame - lastFrameTime;
@@ -277,6 +283,7 @@ int main()
 		// section to draw the main cube
 		{
 			auto model = glm::mat4(1.0f);
+			model = glm::rotate(model, glm::radians(angle), {axis[0], axis[1], axis[2]});
 			ShaderProgram.SetMat3("modelMatrix", transpose(inverse(model)));
 			ShaderProgram.SetMat4("model", model);
 			//glDrawArrays(GL_TRIANGLES, 0, faceGenerator.vertices.size());

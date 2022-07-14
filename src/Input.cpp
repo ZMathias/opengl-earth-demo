@@ -10,7 +10,7 @@
 
 void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime)
 {
-	const float speedFactor = 3.5f * deltaTime;
+	const float speedFactor = 15.f * deltaTime;
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{

@@ -9,5 +9,5 @@ uniform vec3 ColorOffset;
 
 void main()
 {
-    FragColor = vec4(Pos, 1.0f);
+    FragColor = vec4(Pos + ColorOffset, 1.0f);
 } 

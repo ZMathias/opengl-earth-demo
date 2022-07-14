@@ -185,7 +185,7 @@
   <ItemGroup>
     <ClCompile Include="Callbacks.cpp" />
     <ClCompile Include="Debug.cpp" />
-    <ClCompile Include="Icosphere.cpp" />
+    <ClCompile Include="Cubesphere.cpp" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_draw.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
@@ -196,11 +196,13 @@
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshOptimizer.cpp" />
+    <ClCompile Include="Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Callbacks.hpp" />
     <ClInclude Include="Debug.hpp" />
-    <ClInclude Include="Icosphere.h" />
+    <ClInclude Include="Cubesphere.hpp" />
+    <ClInclude Include="Sphere.hpp" />
     <ClInclude Include="SphereGenerator.h" />
     <ClInclude Include="imgui.h" />
     <ClInclude Include="imgui_impl_glfw.h" />

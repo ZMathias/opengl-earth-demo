@@ -14,9 +14,18 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat3 modelMatrix;
 
+uniform float heightMultiplier;
+
+vec2 spherical(vec3 a)
+{
+	float longitude = atan(a.y, a.x);
+	float latitude=acos(a.z);
+	return vec2(longitude, latitude);
+}
+
 void main()
 {
-	vec4 height = texture(tex, aPos.xy);
-    gl_Position = projection * view * model * vec4(aPos*height.x / 2, 1.0);
+	vec4 height = texture(tex, aTexCoord);
+    gl_Position = projection * view * model * vec4(aPos + aNormal*height.xyz * heightMultiplier, 1.0);
 	Pos = height.xyz;
 }
