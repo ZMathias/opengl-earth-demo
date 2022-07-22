@@ -14,18 +14,41 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat3 modelMatrix;
 
-uniform float heightMultiplier;
+const float TWOOVERPI = 0.63661977236f;
+const float PI = 3.14159265358979323846f;
+const float TWOPI = 6.28318530717958647692f;
+const float ONEOVERPI = 0.31830988618f;
+const float ONEOVERTWOPI = 0.15915494309;
+const float radius = 10.0f;
 
-vec2 spherical(vec3 a)
-{
-	float longitude = atan(a.y, a.x);
-	float latitude=acos(a.z);
-	return vec2(longitude, latitude);
 }
 
 void main()
 {
-	vec4 height = texture(tex, aTexCoord);
-    gl_Position = projection * view * model * vec4(aPos + aNormal*height.xyz * heightMultiplier, 1.0);
+	vec2 uv;
+	uv.x = 0.0f;
+	uv.y = 0.0f;
+	if (aPos.z > 0)
+	{
+		uv.x = asin(aPos.x) * ONEOVERTWOPI + 0.25f;
+		uv.y = asin(aPos.y) * ONEOVERPI + 0.5f;
+	}
+	else
+	{
+		uv.x = asin(aPos.x) * ONEOVERTWOPI - 0.75;
+		uv.y = asin(aPos.x) * ONEOVERTWOPI - 0.75;
+	}
+	vec3 height = texture(tex, uv).xyz;
+    gl_Position = projection * view * model * vec4(aPos + aNormal * height / 5, 1.0);
+	if (uv.x < 0.0f)
+	{
+		Pos = vec3(0.0f);
+	}
+	
+	if (uv.y < 0.0f)
+	{
+		Pos = vec3(10.0f);
+	}
+
 	Pos = height.xyz;
 }
