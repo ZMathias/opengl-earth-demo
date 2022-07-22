@@ -4,6 +4,8 @@ layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoord;
 
 out vec2 TexCoord;
+out vec3 Normal;
+out vec3 FragmentWorldPos;
 
 uniform sampler2D tex;
 
@@ -24,6 +26,9 @@ vec2 spherical(vec3 a)
 void main()
 {
 	vec4 height = texture(tex, aTexCoord);
-    gl_Position = projection * view * model * vec4(aPos + aNormal*height.xyz * heightMultiplier, 1.0);
+	vec3 offsetNormal  = aNormal * height.xyz * heightMultiplier;
+    gl_Position = projection * view * model * vec4(aPos + offsetNormal, 1.0);
 	TexCoord = aTexCoord;
+	Normal = modelMatrix * aNormal;
+	FragmentWorldPos = vec3(model * vec4(aPos, 1.0f));
 }

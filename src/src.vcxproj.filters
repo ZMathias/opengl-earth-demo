@@ -128,6 +128,9 @@
     <ClInclude Include="Sphere.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cube_data.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="triangle.vert">
@@ -138,6 +141,9 @@
     </None>
     <None Include="lightsource.frag">
       <Filter>Shaders\Fragment Shaders</Filter>
+    </None>
+    <None Include="lightsource.vert">
+      <Filter>Shaders\Vertex Shaders</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -11,6 +11,7 @@
 #include "Shader.hpp"
 #include "Texture.hpp"
 #include "Sphere.hpp"
+#include "cube_data.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -22,6 +23,10 @@ float ColorOffset{};
 float heightMultiplier{1.0f};
 float lastX = width / 2.0f;
 float lastY = height / 2.0f;
+
+// point light
+float pointLight[3]{0.2f, 1.5f, 5.0f};
+float pointLightPos[3]{0.0f, 0.0f, 0.0f};
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -69,6 +74,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 				isWireFrameToggled = true;
 			}
+			return;
+		case GLFW_KEY_2:
+			pointLightPos[0] = camera.CameraPosition.x;
+			pointLightPos[1] = camera.CameraPosition.y - 0.5f;
+			pointLightPos[2] = camera.CameraPosition.z;
 			return;
 		case GLFW_KEY_TAB:
 			if (isMouseToggled)
@@ -119,6 +129,7 @@ GLFWwindow* initOpenGL()
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
+
 	glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouseCallback);
@@ -133,16 +144,52 @@ void getHardwareStats()
 	LogInfo("Maximum number of vertex attributes allowed on hardware: " + std::to_string(nrAttributes) + "\n");
 }
 
+void setMaterial(const Shader& shader, const float shininess)
+{
+	// get active shader id
+	GLint prog{};
+	glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+	//activate shader passed as parameter
+	shader.UseProgram();
+	shader.SetFloat("material.shininess", shininess);
+
+	// revert to previous shader
+	glUseProgram(prog);
+}
+
+void setLight(const std::string& name, const Shader& shader, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, const float constant, const float linear, const float quadratic)
+{
+	// get active shader id
+	GLint prog{};
+	glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+
+	// activate shader passed as parameter
+	shader.UseProgram();
+	shader.SetVec3(name + ".ambient", ambient);
+	shader.SetVec3(name + ".diffuse", diffuse);
+	shader.SetVec3(name + ".specular", specular);
+
+	shader.SetFloat(name + ".constant", constant);
+	shader.SetFloat(name + ".linear", linear);
+	shader.SetFloat(name + ".quadratic", quadratic);
+
+	// revert to previous shader
+	glUseProgram(prog);
+}
+
 #define RenderMenu() \
 	ImGui_ImplOpenGL3_NewFrame(); \
 	ImGui_ImplGlfw_NewFrame(); \
 	ImGui::NewFrame(); \
 	ImGui::Begin("Properties"); \
 	{ \
-		ImGui::SliderFloat("Color Offset", &ColorOffset, -2.0f, 2.0f, "%.2f"); \
 		ImGui::SliderFloat("heightMultiplier", &heightMultiplier, 0.1f, 50.f, "%.2f"); \
 		ImGui::SliderFloat("angle", &angle, -180.0f, 180.0f, "%.2f"); \
 		ImGui::SliderFloat3("axis", axis, 0.0f, 1.0f, "%.2f"); \
+		ImGui::Separator(); \
+		ImGui::SliderFloat3("pointLight properties", pointLight, 0.0f, 25.0f, "%.2f"); \
+		ImGui::SliderFloat3("pointLight position", pointLightPos, -20.0f, 20.0f, "%.2f"); \
+		ImGui::Separator(); \
 		ImGui::Text("Triangles: %i", sphere.getIndexCount() / 3); \
 		ImGui::Text("Vertices: %i", sphere.getInterleavedVertexCount() / 3); \
 	} \
@@ -161,7 +208,11 @@ int main()
 	ShaderProgram.CompileShaders();
 	ShaderProgram.CreateAndLinkProgram();
 
-	Sphere sphere(20, 4320, 2160, true);
+	Shader LightProgram(R"(lightsource.vert)", R"(lightsource.frag)");
+	LightProgram.CompileShaders();
+	LightProgram.CreateAndLinkProgram();
+
+	Sphere sphere(50, 4860, 2430, true);
 
 	//create a vertex buffer object and the vertex array object
 	unsigned int VAO, VBO, EBO;
@@ -190,28 +241,16 @@ int main()
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	glCheckError();
+	unsigned int lightVAO, lightVBO;
+	glGenVertexArrays(1, &lightVAO);
+	glBindVertexArray(lightVAO);
 
-	unsigned int VAOplane, VBOplane;
-	glGenVertexArrays(1, &VAOplane);
-	glBindVertexArray(VAOplane);
-	glGenBuffers(1, &VBOplane);
+	//do the vbo
+	glGenBuffers(1, &lightVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof lightVertices, lightVertices, GL_STATIC_DRAW);
 
-	constexpr float verticesPlane[] = 
-	{
-	     0.5f,  0.5f, 0.0f,  
-	     0.5f, -0.5f, 0.0f,  
-	    -0.5f,  0.5f, 0.0f, 
-	     0.5f, -0.5f, 0.0f,  
-	    -0.5f, -0.5f, 0.0f,  
-	    -0.5f,  0.5f, 0.0f   
-	}; 
-
-	//bind the VBO
-	glBindBuffer(GL_ARRAY_BUFFER, VBOplane);
-	glBufferData(GL_ARRAY_BUFFER, sizeof verticesPlane, verticesPlane, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glBindVertexArray(0);
@@ -228,20 +267,24 @@ int main()
 
 	// set the texture ids of the diffuse and specular maps
 	ShaderProgram.UseProgram();
-
-	glCheckError();
+	ShaderProgram.SetInt("tex", 0);
+	ShaderProgram.SetInt("material.diffuse", 1);
 
 	// this doesn't need to be done every frame
-	const glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.01f, 100.0f);
+	const glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.01f, 1000.0f);
 	ShaderProgram.SetMat4("projection", projection);
-	ShaderProgram.SetInt("tex", 0);
-	ShaderProgram.SetInt("color", 1);
 
+	LightProgram.UseProgram();
+	LightProgram.SetMat4("projection", projection);
+
+	ShaderProgram.UseProgram();
 	float lastFrameTime{};
 	float timeAccumulator{};
 	float fpsAccumulator{};
 	unsigned int dataPoints{};
 
+	// set material properties
+	setMaterial(ShaderProgram, 64.0f);
 	glCheckError();
 #ifdef MENU
 	ImGui::CreateContext();
@@ -249,18 +292,22 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 #endif
 	float angle{-90.0f};
-	float axis[3]{1.0f, 1.0f, 1.0f};
+	float axis[3]{1.0f, 0.0f, 0.0f};
 	while (!glfwWindowShouldClose(window))
 	{
 #ifdef MENU
+		glGetError();
 		RenderMenu();
-		ShaderProgram.SetVec3("ColorOffset", glm::vec3(ColorOffset));
+
+		ShaderProgram.UseProgram();
 		ShaderProgram.SetFloat("heightMultiplier", heightMultiplier);
+		glCheckError();
 #endif
 		const float currentFrame = glfwGetTime();
 		const float deltaTime = currentFrame - lastFrameTime;
 		lastFrameTime = currentFrame;
 		timeAccumulator += deltaTime;
+
 
 		// calculate fps
 		if (timeAccumulator >= 1.0f)
@@ -275,13 +322,23 @@ int main()
 		
 		camera.ProcessKeyboard(window, deltaTime);
 
+		glCheckError();
+
 		// set the background color to a very deep grey
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
+
+		setLight("pointLight", ShaderProgram, glm::vec3(pointLight[0]), glm::vec3(pointLight[1]), glm::vec3(pointLight[2]), 1.0f, 0.09f, 0.032f);
+
+		glCheckError();
+
 		ShaderProgram.UseProgram();
 		const glm::mat4 view = camera.RetrieveLookAt();
 		ShaderProgram.SetMat4("view", view);
+		ShaderProgram.SetVec3("cameraPos", camera.CameraPosition);
+		ShaderProgram.SetVec3("pointLight.position", glm::vec3(pointLightPos[0], pointLightPos[1], pointLightPos[2]));
+
+		glCheckError();
 
 		// set the vao just before drawing
 		glBindVertexArray(VAO);
@@ -301,6 +358,23 @@ int main()
 		}
 		glBindVertexArray(0);
 
+		glCheckError();
+
+		LightProgram.UseProgram();
+		glBindVertexArray(lightVAO);
+		{
+			// section to draw the light source
+
+			auto lightModel = glm::translate(glm::mat4(1.0f), glm::vec3(pointLightPos[0], pointLightPos[1], pointLightPos[2]));
+			lightModel = glm::scale(lightModel, glm::vec3(0.2f));
+
+			LightProgram.SetMat4("view", view);
+			LightProgram.SetMat4("model", lightModel);
+
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+		LightProgram.UnbindShader();
+		glBindVertexArray(0);
 #ifdef MENU
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
