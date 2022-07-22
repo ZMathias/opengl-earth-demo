@@ -21,8 +21,6 @@ const float ONEOVERPI = 0.31830988618f;
 const float ONEOVERTWOPI = 0.15915494309;
 const float radius = 10.0f;
 
-}
-
 void main()
 {
 	vec2 uv;

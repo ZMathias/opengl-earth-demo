@@ -9,8 +9,8 @@
 #include "Input.hpp"
 #include "Callbacks.hpp"
 #include "Shader.hpp"
+#include "Sphere.hpp"
 #include "Texture.hpp"
-#include "Icosphere.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -155,7 +155,7 @@ int main()
 	ShaderProgram.CompileShaders();
 	ShaderProgram.CreateAndLinkProgram();
 
-	Icosphere sphere(10.0f, 6, true);
+	Sphere sphere(1.0f, 4096, 2048);
 
 	//create a vertex buffer object and the vertex array object
 	unsigned int VAO, VBO, EBO;
