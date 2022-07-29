@@ -1,34 +1,20 @@
+// vertex shader
 #version 460 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aTexCoord;
 
-out vec2 TexCoord;
-out vec3 Normal;
-out vec3 FragmentWorldPos;
+layout (location = 0) in vec3 aPos_VS_in;
+layout (location = 1) in vec3 aNormal_VS_in;
+layout (location = 2) in vec2 aTexCoord_VS_in;
 
-uniform sampler2D tex;
+out vec3 WorldPos_TCS_in;
+out vec3 Normal_TCS_in;
+out vec2 TexCoord_TCS_in;
 
 uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
 uniform mat3 modelMatrix;
-
-uniform float heightMultiplier;
-
-vec2 spherical(vec3 a)
-{
-	float longitude = atan(a.y, a.x);
-	float latitude=acos(a.z);
-	return vec2(longitude, latitude);
-}
 
 void main()
 {
-	vec4 height = texture(tex, aTexCoord);
-	vec3 offsetNormal  = aNormal * height.xyz * heightMultiplier;
-    gl_Position = projection * view * model * vec4(aPos + offsetNormal, 1.0);
-	TexCoord = aTexCoord;
-	Normal = modelMatrix * aNormal;
-	FragmentWorldPos = vec3(model * vec4(aPos, 1.0f));
+	WorldPos_TCS_in = (model * vec4(aPos_VS_in, 1.0)).xyz;
+	Normal_TCS_in = modelMatrix * aNormal_VS_in;
+	TexCoord_TCS_in = aTexCoord_VS_in;
 }

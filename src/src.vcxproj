@@ -224,6 +224,8 @@
     <None Include="lightsource.frag" />
     <None Include="lightsource.vert" />
     <None Include="triangle.frag" />
+    <None Include="triangle.tesc" />
+    <None Include="triangle.tese" />
     <None Include="triangle.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -16,14 +16,14 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{041c415f-dabf-4dce-aed1-58f86ae69bc5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\Vertex Shaders">
-      <UniqueIdentifier>{2a30d5c7-3043-4640-89f2-7515e69887b1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shaders\Fragment Shaders">
-      <UniqueIdentifier>{e4638ab7-fda7-4206-beae-fab8e1a10ce7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Libraries">
       <UniqueIdentifier>{91af3332-62b9-40ac-b28c-728787805ca3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Earth Shaders">
+      <UniqueIdentifier>{4747aba0-e844-48bf-80c3-37b2549b6f96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Lightsource Shaders">
+      <UniqueIdentifier>{b4637ed5-d906-4a68-8395-aa51ce952071}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -134,16 +134,22 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="triangle.vert">
-      <Filter>Shaders\Vertex Shaders</Filter>
+      <Filter>Shaders\Earth Shaders</Filter>
     </None>
     <None Include="triangle.frag">
-      <Filter>Shaders\Fragment Shaders</Filter>
-    </None>
-    <None Include="lightsource.frag">
-      <Filter>Shaders\Fragment Shaders</Filter>
+      <Filter>Shaders\Earth Shaders</Filter>
     </None>
     <None Include="lightsource.vert">
-      <Filter>Shaders\Vertex Shaders</Filter>
+      <Filter>Shaders\Lightsource Shaders</Filter>
+    </None>
+    <None Include="lightsource.frag">
+      <Filter>Shaders\Lightsource Shaders</Filter>
+    </None>
+    <None Include="triangle.tesc">
+      <Filter>Shaders\Earth Shaders</Filter>
+    </None>
+    <None Include="triangle.tese">
+      <Filter>Shaders\Earth Shaders</Filter>
     </None>
   </ItemGroup>
 </Project>

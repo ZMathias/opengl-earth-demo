@@ -11,7 +11,7 @@
 class Shader
 {
 	unsigned int vertexShaderId{}, fragmentShaderId{}, controlShaderId{}, evaluationShaderId{}, programId{};
-	std::string vertexShader, fragmentShader;
+	std::string vertexShader, fragmentShader, controlShader, evaluationShader;
 
 public:
 
@@ -31,6 +31,16 @@ public:
 				LogError("Failed to open control and evaluation shader files");
 				return;
 			}
+			controlFile.seekg(0, std::ios::end);
+			evaluationFile.seekg(0, std::ios::end);
+			controlShader.reserve(controlFile.tellg());
+			evaluationShader.reserve(evaluationFile.tellg());
+			controlFile.seekg(0, std::ios::beg);
+			evaluationFile.seekg(0, std::ios::beg);
+			controlShader.assign(std::istreambuf_iterator(controlFile), std::istreambuf_iterator<char>());
+			evaluationShader.assign(std::istreambuf_iterator(evaluationFile), std::istreambuf_iterator<char>());
+			controlFile.close();
+			evaluationFile.close();
 		}
 		if (!(vertexFile.is_open() && fragmentFile.is_open()))
 		{
@@ -44,8 +54,8 @@ public:
 			fragmentShader.reserve(fragmentFile.tellg());
 			vertexFile.seekg(0, std::ios::beg);
 			fragmentFile.seekg(0, std::ios::beg);
-			vertexShader.assign(std::istreambuf_iterator<char>(vertexFile), std::istreambuf_iterator<char>());
-			fragmentShader.assign(std::istreambuf_iterator<char>(fragmentFile), std::istreambuf_iterator<char>());
+			vertexShader.assign(std::istreambuf_iterator(vertexFile), std::istreambuf_iterator<char>());
+			fragmentShader.assign(std::istreambuf_iterator(fragmentFile), std::istreambuf_iterator<char>());
 			vertexFile.close();
 			fragmentFile.close();
 		}
@@ -54,7 +64,9 @@ public:
 	// tries to compile both shaders and links them into a program
 	// BOTH SHADERS HAVE TO BE POPULATED BEFORE CALLING THIS FUNCTION
 	bool CompileShaders() {
+
 		// compile vertex shader first
+
 		vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
 		const char* shaderCode = vertexShader.c_str();
 		glShaderSource(vertexShaderId, 1, &shaderCode, nullptr);
@@ -82,6 +94,35 @@ public:
 			return GL_FALSE;
 		}
 
+		if (controlShader.length() > 0 && evaluationShader.length() > 0)
+		{
+			// then compile control shader
+			controlShaderId = glCreateShader(GL_TESS_CONTROL_SHADER);
+			shaderCode = controlShader.c_str();
+			glShaderSource(controlShaderId, 1, &shaderCode, nullptr);
+			glCompileShader(controlShaderId);
+			glGetShaderiv(controlShaderId, GL_COMPILE_STATUS, &success);
+			if (!success)
+			{
+				glGetShaderInfoLog(controlShaderId, 512, nullptr, infoLog);
+				LogError(infoLog);
+				return GL_FALSE;
+			}
+
+			// then compile evaluation shader
+			evaluationShaderId = glCreateShader(GL_TESS_EVALUATION_SHADER);
+			shaderCode = evaluationShader.c_str();
+			glShaderSource(evaluationShaderId, 1, &shaderCode, nullptr);
+			glCompileShader(evaluationShaderId);
+			glGetShaderiv(evaluationShaderId, GL_COMPILE_STATUS, &success);
+			if (!success)
+			{
+				glGetShaderInfoLog(evaluationShaderId, 512, nullptr, infoLog);
+				LogError(infoLog);
+				return GL_FALSE;
+			}
+		}
+
 		return GL_TRUE;
 	}
 
@@ -89,8 +130,14 @@ public:
 		programId = glCreateProgram();
 		glAttachShader(programId, vertexShaderId);
 		glAttachShader(programId, fragmentShaderId);
-		glLinkProgram(programId);
+		if (controlShader.length() > 0 && evaluationShader.length() > 0)
+		{
+			glAttachShader(programId, controlShaderId);
+			glAttachShader(programId, evaluationShaderId);
+		}
+
 		int success;
+		glLinkProgram(programId);
 		glGetProgramiv(programId, GL_LINK_STATUS, &success);
 		if (!success)
 		{
@@ -103,6 +150,15 @@ public:
 		glDeleteShader(fragmentShaderId);
 		vertexShader.clear();
 		fragmentShader.clear();
+
+		if (controlShader.length() > 0 && evaluationShader.length() > 0)
+		{
+			glDeleteShader(controlShaderId);
+			glDeleteShader(evaluationShaderId);
+			controlShader.clear();
+			evaluationShader.clear();
+		}
+
 		return GL_TRUE;
 	}
 

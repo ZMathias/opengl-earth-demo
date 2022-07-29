@@ -24,9 +24,9 @@ float heightMultiplier{1.0f};
 float lastX = width / 2.0f;
 float lastY = height / 2.0f;
 
-// point light
-float pointLight[3]{0.2f, 1.5f, 5.0f};
-float pointLightPos[3]{0.0f, 0.0f, 0.0f};
+// ambient difuse specular for directional light
+float dirLight[3]{0.1f, 6.0f, 0.75f}; 
+float dirLightDirection[3]{3.0f, -6.0f, -1.75f};
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -74,11 +74,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 				isWireFrameToggled = true;
 			}
-			return;
-		case GLFW_KEY_2:
-			pointLightPos[0] = camera.CameraPosition.x;
-			pointLightPos[1] = camera.CameraPosition.y - 0.5f;
-			pointLightPos[2] = camera.CameraPosition.z;
 			return;
 		case GLFW_KEY_TAB:
 			if (isMouseToggled)
@@ -129,6 +124,7 @@ GLFWwindow* initOpenGL()
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
+	glPatchParameteri(GL_PATCH_VERTICES, 3);
 
 	glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -139,9 +135,11 @@ GLFWwindow* initOpenGL()
 
 void getHardwareStats()
 {
-	int nrAttributes;
+	GLint nrAttributes = 0, MaxPatchVertices = 0;
 	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
+	glGetIntegerv(GL_MAX_PATCH_VERTICES, &MaxPatchVertices);
 	LogInfo("Maximum number of vertex attributes allowed on hardware: " + std::to_string(nrAttributes) + "\n");
+	LogInfo("Max supported patch vertices: " + std::to_string(MaxPatchVertices) + "\n");
 }
 
 void setMaterial(const Shader& shader, const float shininess)
@@ -157,7 +155,7 @@ void setMaterial(const Shader& shader, const float shininess)
 	glUseProgram(prog);
 }
 
-void setLight(const std::string& name, const Shader& shader, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, const float constant, const float linear, const float quadratic)
+void setLight(const std::string& name, const Shader& shader, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, const glm::vec3& direction)
 {
 	// get active shader id
 	GLint prog{};
@@ -168,10 +166,7 @@ void setLight(const std::string& name, const Shader& shader, const glm::vec3& am
 	shader.SetVec3(name + ".ambient", ambient);
 	shader.SetVec3(name + ".diffuse", diffuse);
 	shader.SetVec3(name + ".specular", specular);
-
-	shader.SetFloat(name + ".constant", constant);
-	shader.SetFloat(name + ".linear", linear);
-	shader.SetFloat(name + ".quadratic", quadratic);
+	shader.SetVec3(name + ".direction", normalize(direction));
 
 	// revert to previous shader
 	glUseProgram(prog);
@@ -187,8 +182,8 @@ void setLight(const std::string& name, const Shader& shader, const glm::vec3& am
 		ImGui::SliderFloat("angle", &angle, -180.0f, 180.0f, "%.2f"); \
 		ImGui::SliderFloat3("axis", axis, 0.0f, 1.0f, "%.2f"); \
 		ImGui::Separator(); \
-		ImGui::SliderFloat3("pointLight properties", pointLight, 0.0f, 25.0f, "%.2f"); \
-		ImGui::SliderFloat3("pointLight position", pointLightPos, -20.0f, 20.0f, "%.2f"); \
+		ImGui::SliderFloat3("dirLight properties", dirLight, 0.0f, 25.0f, "%.2f"); \
+		ImGui::SliderFloat3("dirLight direction", dirLightDirection, -20.0f, 20.0f, "%.2f"); \
 		ImGui::Separator(); \
 		ImGui::Text("Triangles: %i", sphere.getIndexCount() / 3); \
 		ImGui::Text("Vertices: %i", sphere.getInterleavedVertexCount() / 3); \
@@ -204,15 +199,11 @@ int main()
 
 	getHardwareStats();
 
-	Shader ShaderProgram(R"(triangle.vert)", R"(triangle.frag)");
+	Shader ShaderProgram(R"(triangle.vert)", R"(triangle.frag)", R"(triangle.tesc)", R"(triangle.tese)");
 	ShaderProgram.CompileShaders();
 	ShaderProgram.CreateAndLinkProgram();
 
-	Shader LightProgram(R"(lightsource.vert)", R"(lightsource.frag)");
-	LightProgram.CompileShaders();
-	LightProgram.CreateAndLinkProgram();
-
-	Sphere sphere(50, 4860, 2430, true);
+	Sphere sphere(100, 240, 120, true);
 
 	//create a vertex buffer object and the vertex array object
 	unsigned int VAO, VBO, EBO;
@@ -260,31 +251,34 @@ int main()
 
 	//add textures
 	Texture texture;
-	texture.AddTexture(R"(F:\prj\C++\GeoWizard\src\res\heightmap-small.png)", 0);
-	texture.AddTexture(R"(F:\prj\C++\GeoWizard\src\res\color-rgba.png)", 1);
+	texture.AddTexture(R"(F:\GeoWizardImages\Heightmap\slices-16bit\heightmap-slice-0.png)", 0, GL_RGBA16);
+	texture.AddTexture(R"(F:\GeoWizardImages\Heightmap\slices-16bit\heightmap-slice-1.png)", 1, GL_RGBA16);
+	texture.AddTexture(R"(F:\GeoWizardImages\Colour\4096x4096-slices\colour-slice-0.png)", 2);
+	texture.AddTexture(R"(F:\GeoWizardImages\Colour\4096x4096-slices\colour-slice-1.png)", 3);
 
 	glCheckError();
 
 	// set the texture ids of the diffuse and specular maps
 	ShaderProgram.UseProgram();
-	ShaderProgram.SetInt("tex", 0);
-	ShaderProgram.SetInt("material.diffuse", 1);
+	ShaderProgram.SetInt("heightMap_ES_in0", 0);
+	ShaderProgram.SetInt("heightMap_ES_in1", 1);
+	ShaderProgram.SetInt("heightMap_TCS_in0", 0);
+	ShaderProgram.SetInt("heightMap_TCS_in1", 1);
+	ShaderProgram.SetInt("material.diffuseSlice0", 2);
+	ShaderProgram.SetInt("material.diffuseSlice1", 3);
+	ShaderProgram.SetInt("material.debug", 3);
 
 	// this doesn't need to be done every frame
 	const glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.01f, 1000.0f);
 	ShaderProgram.SetMat4("projection", projection);
 
-	LightProgram.UseProgram();
-	LightProgram.SetMat4("projection", projection);
-
-	ShaderProgram.UseProgram();
 	float lastFrameTime{};
 	float timeAccumulator{};
 	float fpsAccumulator{};
 	unsigned int dataPoints{};
 
 	// set material properties
-	setMaterial(ShaderProgram, 64.0f);
+	setMaterial(ShaderProgram, 16.0f);
 	glCheckError();
 #ifdef MENU
 	ImGui::CreateContext();
@@ -296,12 +290,10 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 #ifdef MENU
-		glGetError();
 		RenderMenu();
-
 		ShaderProgram.UseProgram();
 		ShaderProgram.SetFloat("heightMultiplier", heightMultiplier);
-		glCheckError();
+
 #endif
 		const float currentFrame = glfwGetTime();
 		const float deltaTime = currentFrame - lastFrameTime;
@@ -322,58 +314,30 @@ int main()
 		
 		camera.ProcessKeyboard(window, deltaTime);
 
-		glCheckError();
-
 		// set the background color to a very deep grey
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		setLight("pointLight", ShaderProgram, glm::vec3(pointLight[0]), glm::vec3(pointLight[1]), glm::vec3(pointLight[2]), 1.0f, 0.09f, 0.032f);
-
-		glCheckError();
+		setLight("dirLight", ShaderProgram, glm::vec3(dirLight[0]), glm::vec3(dirLight[1]), glm::vec3(dirLight[2]), glm::vec3(dirLightDirection[0], dirLightDirection[1], dirLightDirection[2]));
 
 		ShaderProgram.UseProgram();
 		const glm::mat4 view = camera.RetrieveLookAt();
 		ShaderProgram.SetMat4("view", view);
 		ShaderProgram.SetVec3("cameraPos", camera.CameraPosition);
-		ShaderProgram.SetVec3("pointLight.position", glm::vec3(pointLightPos[0], pointLightPos[1], pointLightPos[2]));
-
-		glCheckError();
 
 		// set the vao just before drawing
 		glBindVertexArray(VAO);
 		// section to draw the main cube
 		{
 			auto model = glm::mat4(1.0f);
-			model = glm::rotate(model, glm::radians(angle), {axis[0], axis[1], axis[2]});
+			model = rotate(model, glm::radians(angle), {axis[0], axis[1], axis[2]});
 			ShaderProgram.SetMat3("modelMatrix", transpose(inverse(model)));
 			ShaderProgram.SetMat4("model", model);
-			//glDrawArrays(GL_TRIANGLES, 0, faceGenerator.vertices.size());
-			texture.BindTexture(0);
-			texture.BindTexture(1);
-			glDrawElements(GL_TRIANGLES, sphere.getIndexCount(), GL_UNSIGNED_INT, (void*)0);
-			Texture::UnbindTexture(0);
-			Texture::UnbindTexture(1);
+			texture.BindAllTextures();
+			glDrawElements(GL_PATCHES, sphere.getIndexCount(), GL_UNSIGNED_INT, (void*)0);
+			texture.UnbindAllTextures();
 
 		}
-		glBindVertexArray(0);
-
-		glCheckError();
-
-		LightProgram.UseProgram();
-		glBindVertexArray(lightVAO);
-		{
-			// section to draw the light source
-
-			auto lightModel = glm::translate(glm::mat4(1.0f), glm::vec3(pointLightPos[0], pointLightPos[1], pointLightPos[2]));
-			lightModel = glm::scale(lightModel, glm::vec3(0.2f));
-
-			LightProgram.SetMat4("view", view);
-			LightProgram.SetMat4("model", lightModel);
-
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
-		LightProgram.UnbindShader();
 		glBindVertexArray(0);
 #ifdef MENU
 		ImGui::Render();
